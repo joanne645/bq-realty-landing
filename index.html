@@ -97,8 +97,14 @@ h1 .line1{display:block;color:#f4efe4}h1 .line2{display:block;background:linear-
 
 <section class="quote"><div class="wrap"><h2>让每一个阶段都有下一步<br>让每一次增长都有系统承接</h2><p>BQ 想做的不是让 Agent 更忙，而是让能力、机会、Production 和生活之间形成更好的循环</p></div></section>
 
-<section class="conversation" id="talk"><div class="wrap conv"><div><div class="kicker">CONFIDENTIAL GROWTH CONVERSATION</div><h2>先聊你现在在哪一关<br>再谈要不要加入 BQ</h2><p>告诉我们过去 12 个月的 Production、所在市场和下一阶段目标。我们会从你的业务开始，而不是先给你一套统一的公司介绍</p></div><form class="form" onsubmit="submitLead(event)">
+<section class="conversation" id="talk"><div class="wrap conv"><div><div class="kicker">CONFIDENTIAL GROWTH CONVERSATION</div><h2>先聊你现在在哪一关<br>再谈要不要加入 BQ</h2><p>告诉我们过去 12 个月的 Production、所在市场和下一阶段目标。我们会从你的业务开始，而不是先给你一套统一的公司介绍</p></div><form class="form" action="https://script.google.com/macros/s/AKfycbzw6UkrKb16LC2B2JPZVGo4OK4ck9MEKlEEwkFwgHcdyxI7ndZO5qmqdNUkBUsakmKciA/exec" method="POST" target="lead-submit-frame" onsubmit="return prepareLeadSubmit(event)">
 <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;opacity:0;pointer-events:none">
+<input type="hidden" name="utm_source">
+<input type="hidden" name="utm_medium">
+<input type="hidden" name="utm_campaign">
+<input type="hidden" name="utm_content">
+<input type="hidden" name="landing_url">
+<input type="hidden" name="referrer">
 <div class="field"><label>Name *</label><input name="name" autocomplete="name" required></div>
 <div class="field"><label>Phone / WeChat *</label><input name="phoneWechat" autocomplete="tel" required></div>
 <div class="field"><label>Current Brokerage</label><input name="brokerage" autocomplete="organization"></div>
@@ -129,46 +135,46 @@ listing:['Listing Launch','Signed Listing 以后进入统一上市节奏','Launc
 farm:['Farming Package','同一个社区持续出现，而不是每个月重新想内容','Farm + CTA','Agent 确认区域、目标人群与主要 CTA','Campaign kit','组织月度主题、Print / Digital 素材与 Follow-up 节奏',['Area selected','Campaign built','Touches deployed','Follow-up cycle']]
 };
 function setService(k){const x=services[k];document.querySelectorAll('.services button').forEach(b=>b.classList.toggle('active',b.dataset.s===k));document.getElementById('ticketTitle').textContent=x[0];document.getElementById('ticketSub').textContent=x[1];document.getElementById('agentConfirm').textContent=x[2];document.getElementById('agentP').textContent=x[3];document.getElementById('deskSupport').textContent=x[4];document.getElementById('deskP').textContent=x[5];document.getElementById('flow').innerHTML=x[6].map((f,i)=>`<div class="flowStep"><b>0${i+1}</b><span>${f}</span></div>`).join('')}
-const LEAD_API_URL='https://script.google.com/macros/s/AKfycbzw6UkrKb16LC2B2JPZVGo4OK4ck9MEKlEEwkFwgHcdyxI7ndZO5qmqdNUkBUsakmKciA/exec';
+let leadSubmissionPending=false;
 
-async function submitLead(e){
-  e.preventDefault();
-
+function prepareLeadSubmit(e){
   const form=e.target;
   const msg=form.querySelector('.msg');
   const btn=form.querySelector('button[type="submit"]');
-  const originalText=btn.textContent;
+  const query=new URLSearchParams(window.location.search);
+
+  form.elements['utm_source'].value=query.get('utm_source')||query.get('source')||'direct';
+  form.elements['utm_medium'].value=query.get('utm_medium')||'';
+  form.elements['utm_campaign'].value=query.get('utm_campaign')||'';
+  form.elements['utm_content'].value=query.get('utm_content')||'';
+  form.elements['landing_url'].value=window.location.href;
+  form.elements['referrer'].value=document.referrer||'';
 
   btn.disabled=true;
+  btn.dataset.originalText=btn.textContent;
   btn.textContent='Submitting…';
   msg.textContent='';
+  leadSubmissionPending=true;
 
-  const query=new URLSearchParams(window.location.search);
-  const data=new FormData(form);
+  // Allow the browser's native POST to the hidden iframe.
+  return true;
+}
 
-  data.set('utm_source',query.get('utm_source')||query.get('source')||'direct');
-  data.set('utm_medium',query.get('utm_medium')||'');
-  data.set('utm_campaign',query.get('utm_campaign')||'');
-  data.set('utm_content',query.get('utm_content')||'');
-  data.set('landing_url',window.location.href);
-  data.set('referrer',document.referrer||'');
+function leadSubmitComplete(){
+  if(!leadSubmissionPending) return;
 
-  try{
-    await fetch(LEAD_API_URL,{
-      method:'POST',
-      mode:'no-cors',
-      body:new URLSearchParams(data)
-    });
+  const form=document.querySelector('#contact form.form');
+  if(!form) return;
 
-    msg.textContent='✓ 已收到，我们会根据你目前的阶段联系你';
-    form.reset();
-  }catch(err){
-    console.error('Lead submission failed:',err);
-    msg.textContent='提交暂时没有成功，请稍后再试，或直接联系 Joan。';
-  }finally{
-    btn.disabled=false;
-    btn.textContent=originalText;
-  }
+  const msg=form.querySelector('.msg');
+  const btn=form.querySelector('button[type="submit"]');
+
+  msg.textContent='✓ 已收到，我们会根据你目前的阶段联系你';
+  form.reset();
+
+  btn.disabled=false;
+  btn.textContent=btn.dataset.originalText||'Request a Conversation →';
+  leadSubmissionPending=false;
 }
 window.addEventListener('scroll',()=>document.querySelector('.nav').classList.toggle('scrolled',scrollY>30));setService('offer');
 </script>
